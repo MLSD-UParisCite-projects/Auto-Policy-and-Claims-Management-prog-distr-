@@ -5,7 +5,7 @@ from controllers.policy_controller import router as policy_router
 # NOTE D'ARCHITECTURE (RAPPEL) :
 # 1. Communication Utilisateur <-> Microservice : API REST (FastAPI sur le port 8080)
 # 2. Communication Inter-Microservices (claim-service <-> policy-service) :
-#    -> TODO (Phase suivante quand on ) : Ajouter un serveur gRPC (ex: port 50051) avec Protobuf
+#    -> TODO (Phase suivante quand on commence le microservice de claims) : Ajouter un serveur gRPC (ex: port 50051) avec Protobuf
 #       pour que claim-service vérifie les polices auprès de policy-service via gRPC.
 # ==============================================================================
 

@@ -40,14 +40,14 @@ metadata:
   labels:
     app: policy-service
 spec:
-  type: NodePort
+  # ClusterIP : accessible uniquement en interne dans le cluster Kubernetes (par l'API Gateway)
+  type: ClusterIP
   selector:
     app: policy-service
   ports:
     - name: rest-http
       protocol: TCP
-      port: 8080        # Port REST (Utilisateur <-> Microservice)
+      port: 8080        # Port REST interne (appelé par api-gateway sur http://policy-service:8080)
       targetPort: 8080  # Port du conteneur FastAPI
-      nodePort: 30080   # Port exposé sur Minikube
     # TODO (Phase gRPC) : Exposer également le port gRPC (ex: 50051) en interne
     # pour la communication inter-microservices (claim-service <-> policy-service).
