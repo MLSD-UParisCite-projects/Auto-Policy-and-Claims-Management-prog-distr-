@@ -4,6 +4,7 @@ metadata:
   name: policy-service
   labels:
     app: policy-service
+    version: v1
 spec:
   replicas: 1
   selector:
@@ -13,6 +14,7 @@ spec:
     metadata:
       labels:
         app: policy-service
+        version: v1
     spec:
       containers:
         - name: policy-service
@@ -45,9 +47,10 @@ spec:
   selector:
     app: policy-service
   ports:
-    - name: rest-http
+    # Convention Istio : le nom du port doit commencer par "http-" ou "grpc-"
+    - name: http-rest
       protocol: TCP
       port: 8080        # Port REST interne (appelé par api-gateway sur http://policy-service:8080)
       targetPort: 8080  # Port du conteneur FastAPI
-    # TODO (Phase gRPC) : Exposer également le port gRPC (ex: 50051) en interne
+    # TODO (Phase gRPC) : Exposer également le port gRPC (name: grpc-policy, port: 50051)
     # pour la communication inter-microservices (claim-service <-> policy-service).

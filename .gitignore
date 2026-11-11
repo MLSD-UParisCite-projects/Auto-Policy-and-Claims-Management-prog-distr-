@@ -14,3 +14,10 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Binaires Istio temporaires
+istio-bin/
+istioctl.zip
+
+# Fichier de notes personnel
+SUIVI_PROJET.md
+

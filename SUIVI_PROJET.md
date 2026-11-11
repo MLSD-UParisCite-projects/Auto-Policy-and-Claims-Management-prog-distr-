@@ -75,28 +75,40 @@
 
 ---
 
-## 📐 Schéma de l'Architecture Actuelle (Étape 6)
+## 📐 Schéma de l'Architecture Actuelle (Étape 6 + Service Mesh Istio)
 
 ```mermaid
 flowchart LR
-    Client["Utilisateur / Navigateur"] -- "REST HTTP (:30000 / :8000)" --> GW["api-gateway (NodePort)"]
-    subgraph Cluster Kubernetes
-        GW -- "REST Interne (http://policy-service:8080)" --> PS["policy-service (ClusterIP)"]
+    Client["Utilisateur / Navigateur"] -- "REST HTTP (:30000 / :8000)" --> GW["api-gateway + Envoy Sidecar"]
+    subgraph Cluster Kubernetes + Service Mesh Istio
+        GW -- "mTLS + Circuit Breaker + Retries (http://policy-service:8080)" --> PS["policy-service + Envoy Sidecar"]
     end
 ```
 
 ---
 
+### Étape 7 — Intégration du Service Mesh (Istio) (En cours)
+* **Ce qui a changé par rapport à l'étape 6** :
+  * Mise aux normes Istio des manifestes [`policy-service/deployment.yaml`](policy-service/deployment.yaml) et [`api-gateway/deployment.yaml`](api-gateway/deployment.yaml) :
+    * Ajout du label `version: v1` sur les `Deployment` et les `Pod` (requis par Istio pour les `subsets` et l'observabilité Kiali).
+    * Renommage des ports de Service avec le préfixe `http-` (`http-rest`, `http-gateway`) pour la détection automatique du protocole par les proxies Envoy.
+  * Création du fichier [`service-mesh/istio-mesh.yaml`](service-mesh/istio-mesh.yaml) définissant :
+    * **`PeerAuthentication`** (`policy-service-mtls`) : Force le chiffrement **mTLS (`STRICT`)** pour toutes les communications entrantes vers `policy-service`.
+    * **`DestinationRule`** (`policy-service-destination`) : Configure le tunnel `ISTIO_MUTUAL`, le Load Balancing `ROUND_ROBIN` et un **Circuit Breaker** (`outlierDetection` qui éjecte un pod pendant 30s après 3 erreurs 5xx consécutives).
+    * **`VirtualService`** (`policy-service-vs`) : Configure un timeout de `5s` et des **Retries automatiques** (`3 tentatives` de `2s` chacune en cas d'erreur réseau ou `5xx`).
+
+---
+
 ## 🚀 Partie 2 : Feuille de Route des Étapes Suivantes (À venir)
 
-### Étape 7 — Développement du 2e microservice : `claim-service` (Gestion des Sinistres)
+### Étape 8 — Développement du 2e microservice : `claim-service` (Gestion des Sinistres)
 * Création du modèle [`Claim`](claim-service/models/claim.py) et de son `ClaimBuilder` (`claimId`, `policyId`, `description`, `claimedAmount`, `approvedAmount`, `status`, `incidentDate`, `declarationDate`, `rejectionReason`).
 * Création du contrôleur REST [`claim_controller.py`](claim-service/controllers/claim_controller.py) sur le port `8081` (`GET /claims`, `GET /claims/{id}`, `POST /claims`, `PUT /claims/{id}`, `PATCH /claims/{id}/status`, `DELETE /claims/{id}`).
 * **Rappel architecture** : Les routes REST de `claim-service` serviront aux requêtes venant de l'utilisateur (via l'`api-gateway`).
 
 ---
 
-### Étape 8 — Communication Inter-Microservices en gRPC (`claim-service` $\leftrightarrow$ `policy-service`)
+### Étape 9 — Communication Inter-Microservices en gRPC (`claim-service` $\leftrightarrow$ `policy-service`)
 * Définition du contrat **Protocol Buffers** (`protos/policy.proto`) contenant :
   * Le service `PolicyGrpcService` avec la méthode distante `rpc GetPolicy (PolicyRequest) returns (PolicyResponse)`.
 * Génération du code Python gRPC (`grpcio`, `grpcio-tools`) dans `policy-service` et `claim-service`.
@@ -110,7 +122,7 @@ flowchart LR
 
 ---
 
-### Étape 9 — Conteneurisation et Déploiement Kubernetes Complet (`claim-service` + gRPC)
+### Étape 10 — Conteneurisation et Déploiement Kubernetes Complet (`claim-service` + gRPC)
 * Mise à jour de l'image `monci2004/policy-service:2.0` (incluant le serveur gRPC `50051`) et exposition du port `50051` dans [`policy-service/deployment.yaml`](policy-service/deployment.yaml).
 * Création du `Dockerfile` de `claim-service`, push de l'image `monci2004/claim-service:1.0` sur Docker Hub.
 * Création de `claim-service/deployment.yaml` (en `type: ClusterIP` sur le port `8081`, avec la variable d'environnement `POLICY_GRPC_TARGET=policy-service:50051`).

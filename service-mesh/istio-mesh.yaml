@@ -1,0 +1,70 @@
+# ==============================================================================
+# CONFIGURATION SERVICE MESH (ISTIO)
+# Ce fichier configure la couche Service Mesh entre les microservices :
+# 1. PeerAuthentication : Chiffrement mTLS strict pour policy-service (trafic interne)
+# 2. DestinationRule    : mTLS automatique (ISTIO_MUTUAL) + Circuit Breaker + Load Balancing
+# 3. VirtualService     : Routage intelligent, Timeouts (5s) et Retries automatiques (x3)
+# ==============================================================================
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: policy-service-mtls
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: policy-service
+  mtls:
+    # Exige que toute communication vers policy-service soit chiffrée en mTLS par Envoy
+    mode: STRICT
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: policy-service-destination
+  namespace: default
+spec:
+  host: policy-service
+  trafficPolicy:
+    tls:
+      # Les proxies sidecar Envoy établissent automatiquement un tunnel mTLS
+      mode: ISTIO_MUTUAL
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 10
+    # Circuit Breaker (Outlier Detection) : isole un Pod s'il renvoie 3 erreurs 5xx de suite
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 100
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: policy-service-vs
+  namespace: default
+spec:
+  hosts:
+    - policy-service
+  http:
+    - route:
+        - destination:
+            host: policy-service
+            subset: v1
+      timeout: 5s
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: 5xx,connect-failure,refused-stream
+
