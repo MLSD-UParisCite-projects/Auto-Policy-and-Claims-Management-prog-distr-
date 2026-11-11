@@ -1,2 +1,3 @@
-# Contrôleurs du microservice de gestion des sinistres (Claim Service)
+from .claim_controller import router as claim_router
 
+__all__ = ["claim_router"]

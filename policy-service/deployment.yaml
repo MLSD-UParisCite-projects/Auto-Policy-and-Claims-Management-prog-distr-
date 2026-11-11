@@ -44,7 +44,10 @@ spec:
   selector:
     app: policy-service
   ports:
-    - protocol: TCP
-      port: 8080        # Port interne au cluster (http://policy-service:8080 pour claim-service)
+    - name: rest-http
+      protocol: TCP
+      port: 8080        # Port REST (Utilisateur <-> Microservice)
       targetPort: 8080  # Port du conteneur FastAPI
       nodePort: 30080   # Port exposé sur Minikube
+    # TODO (Phase gRPC) : Exposer également le port gRPC (ex: 50051) en interne
+    # pour la communication inter-microservices (claim-service <-> policy-service).

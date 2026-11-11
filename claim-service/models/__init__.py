@@ -1,2 +1,3 @@
-# Modèles du microservice de gestion des sinistres (Claim Service)
+from .claim import Claim
 
+__all__ = ["Claim"]
